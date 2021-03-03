@@ -21,7 +21,7 @@ class InvalidLoginCredentials(Exception):
 
     pass
 
-class InvalidSetID(Exception):
+class InvalidSetId(Exception):
     '''
     The set ID that was passed is invalid - eg it doesn't exist.
     '''

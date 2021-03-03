@@ -1,6 +1,8 @@
+"""
+ This module is a wrapper for the Brickset API v3
+"""
+
 import requests
-import json
-import sys
 from errors import InvalidRequest, InvalidApiKey, InvalidLoginCredentials, InvalidSetId
 
 # params = {"words": 10, "paragraphs": 1, "format": "json"}
@@ -24,6 +26,9 @@ class Client:
 
     @staticmethod
     def checkResponse(request):
+        '''
+        Returns if a Brickset request has no error in the response, otherwise raises InvalidRequest.
+        '''
 
         # Check API status code, if 200 then check payload response for error
         if request.status_code == 200:
@@ -35,33 +40,51 @@ class Client:
 
     @staticmethod
     def processHttpRequest(url, payload):
+        '''
+        Processes an HTTP request, raises a SystemExit exception on failure
+        :param str url: API url
+        :param str payload: JSON payload
+        :returns: If the HTTP response is good, this method will return the ``request``.
+        :rtype: `request`
+        :raises: :class:`pyBrickset.errors.InvalidApiKey`
+        '''
+
         try:
-            r = requests.post(url,data=payload)
-            r.raise_for_status()
-            return r
+            response = requests.post(url,data=payload)
+            response.raise_for_status()
+            return response
         except requests.exceptions.HTTPError as err:
-            raise SystemExit(err)
+            raise SystemExit(err) from err
 
     @staticmethod
     def checkSetId(request, setId):
+        '''
+        Checks that a Brickset SetId is valid.
+        :param request request: Returned API request
+        :param str setId:
+        :returns: If the key is valid, this method will return ``True``.
+        :rtype: `bool`
+        :raises: :class:`pyBrickset.errors.InvalidApiKey`
+        '''
 
         # Check response matches property, if 0 then setId was not found so is invalid
         jsonResponse = request.json()
 
         if jsonResponse["matches"] == 0:
             raise InvalidSetId('SetId {} was not found so is invalid'.format(setId))
-        return
 
     def checkApiKey(self, apiKey=None):
         '''
         Checks that an API key is valid.
-        :param str apiKey: (optional) A key that you want to check the validity of. Defaults to the one provided on initialization.
+        :param str apiKey: (optional) A key that you want to check the validity of.
+           Defaults to the one provided on initialization.
         :returns: If the key is valid, this method will return ``True``.
         :rtype: `bool`
         :raises: :class:`pyBrickset.errors.InvalidApiKey`
         '''
 
-        if not apiKey: apiKey = self.apiKey
+        if not apiKey:
+            apiKey = self.apiKey
 
         payload = {
             'apiKey': apiKey or self.apiKey
@@ -75,7 +98,38 @@ class Client:
             raise InvalidApiKey('The provided API key {} was invalid.'.format(apiKey))
         return True
 
+    def login(self, username, password):
+        '''
+        Logs into Brickset as a user, returning a userhash, which can be used in other methods.
+        The user hash is stored inside the client (:attr:`userHash`).
+        :param str username: Your Brickset username.
+        :param str password: Your Brickset password.
+        :returns: If the login is valid, this will return ``True``.
+        :rtype: `bool`
+        :raises: :class:`pyBrickset.errors.InvalidLoginCredentials`
+        '''
+        payload = {
+            'apiKey': self.apiKey,
+            'username': username,
+            'password': password,
+        }
+        url = self.BASEURL.format('/login')
+
+        response = self.processHttpRequest(url, payload)
+
+        jsonResponse = response.json()
+        if jsonResponse["status"] == 'error':
+            raise InvalidLoginCredentials('{}'.format(jsonResponse["message"]))
+
+        self.userHash = jsonResponse["hash"]
+        return True
+
     def getThemes(self):
+        '''
+        Gets a list Lego themes.
+        :returns: A list of themes.
+        :rtype: list
+        '''
         payload = {
             'apiKey': self.apiKey
         }
@@ -88,6 +142,13 @@ class Client:
         return jsonResponse["themes"]
 
     def getInstructions(self, setId):
+        '''
+        Get the instructions for a set.
+        :param str setId: The ID for the set you want to get the instructions of.
+        :returns: A list of URLs to instructions.
+        :rtype: List[`dict`]
+        '''
+
         payload = {
             'apiKey': self.apiKey,
             'setID': setId

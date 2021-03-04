@@ -2,10 +2,29 @@
  This module is a wrapper for the Brickset API v3
 """
 
+import json
 import requests
 from errors import InvalidRequest, InvalidApiKey, InvalidLoginCredentials, InvalidSetId
 
 # params = {"words": 10, "paragraphs": 1, "format": "json"}
+import logging
+
+# These two lines enable debugging at httplib level (requests->urllib3->http.client)
+# You will see the REQUEST, including HEADERS and DATA, and RESPONSE with HEADERS but without DATA.
+# The only thing missing will be the response.body which is not logged.
+try:
+    import http.client as http_client
+except ImportError:
+    # Python 2
+    import httplib as http_client
+http_client.HTTPConnection.debuglevel = 1
+
+# You must initialize logging, otherwise you'll not see debug output.
+logging.basicConfig()
+logging.getLogger().setLevel(logging.DEBUG)
+requests_log = logging.getLogger("requests.packages.urllib3")
+requests_log.setLevel(logging.DEBUG)
+requests_log.propagate = True
 
 class Client:
     '''
@@ -35,7 +54,8 @@ class Client:
             jsonResponse = request.json()
 
             if jsonResponse["status"] == 'error':
-                raise InvalidRequest('Brickset error was {}'.format(jsonResponse["message"]))
+                raise InvalidRequest(
+                    'Brickset error was {}'.format(jsonResponse["message"]))
             return
 
     @staticmethod
@@ -50,7 +70,7 @@ class Client:
         '''
 
         try:
-            response = requests.post(url,data=payload)
+            response = requests.post(url, data=payload)
             response.raise_for_status()
             return response
         except requests.exceptions.HTTPError as err:
@@ -71,7 +91,8 @@ class Client:
         jsonResponse = request.json()
 
         if jsonResponse["matches"] == 0:
-            raise InvalidSetId('SetId {} was not found so is invalid'.format(setId))
+            raise InvalidSetId(
+                'SetId {} was not found so is invalid'.format(setId))
 
     def checkApiKey(self, apiKey=None):
         '''
@@ -95,7 +116,8 @@ class Client:
 
         jsonResponse = response.json()
         if jsonResponse["status"] == 'error':
-            raise InvalidApiKey('The provided API key {} was invalid.'.format(apiKey))
+            raise InvalidApiKey(
+                'The provided API key {} was invalid.'.format(apiKey))
         return True
 
     def login(self, username, password):
@@ -123,6 +145,43 @@ class Client:
 
         self.userHash = jsonResponse["hash"]
         return True
+
+    def getSets(self, pageSize=500, **kwargs):
+        '''
+        Gets a list Lego sets.
+        :param str theme: The theme of the set.
+        :param str subtheme: The subtheme of the set.
+        :param str setNumber: The LEGO set number.
+        :param str year: The year in which the set came out.
+        :param str orderBy: How you want the set ordered. Accepts 'Number', 'YearFrom', 'Pieces',
+        'Minifigs', 'Rating', 'UKRetailPrice', 'USRetailPrice', 'CARetailPrice', 'DERetailPrice',
+        'FRRetailPrice','UKPricePerPiece', 'USPricePerPiece', 'CAPricePerPiece', 'DEPricePerPiece',
+        'FRPricePerPiece', 'Theme', 'Subtheme', 'Name', 'Random', 'QtyOwned', 'OwnCount',
+        'WantCount', 'UserRating', 'CollectionID'.
+        :param int pageSize: How many results are on a page. Defaults to 500.
+        :returns: A list of sets.
+        :rtype: list
+        '''
+
+        params = {
+            'pageSize': pageSize,
+            'theme': kwargs.get('theme', ''),
+            'subtheme':   kwargs.get('subtheme', ''),
+            'setNumber':  kwargs.get('setNumber', '')
+        }
+
+        payload = {
+            'apiKey': self.apiKey,
+            'userHash': self.userHash,
+            'params': json.dumps(params)
+        }
+        url = self.BASEURL.format('/getSets')
+
+        response = self.processHttpRequest(url, payload)
+        self.checkResponse(response)
+
+        jsonResponse = response.json()
+        return jsonResponse["sets"]
 
     def getThemes(self):
         '''
@@ -161,3 +220,27 @@ class Client:
 
         jsonResponse = response.json()
         return jsonResponse["instructions"]
+
+    def getMinifigCollectionOwned(self):
+        '''
+        Get a list of minifigs owned by a user
+        :returns: A list of owned minifigs.
+        :rtype: List[`dict`]
+        '''
+
+        params = {
+            'owned': 1
+        }
+
+        payload = {
+            'apiKey': self.apiKey,
+            'userHash': self.userHash,
+            'params': json.dumps(params)
+        }
+        url = self.BASEURL.format('/getMinifigCollection')
+
+        response = self.processHttpRequest(url, payload)
+        self.checkResponse(response)
+
+        jsonResponse = response.json()
+        return jsonResponse["minifigs"]

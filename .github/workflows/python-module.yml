@@ -45,6 +45,17 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install pylint requests
+
       - name: Run Pylint
         run: |
           pylint ./src
+
+      - name: Zip code
+        run: |
+          zip -r release.zip src -x "src/examples.py"
+
+      - name: Upload Release artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: release
+          path: ${{ github.workspace }}/release.zip

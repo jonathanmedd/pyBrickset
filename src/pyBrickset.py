@@ -2,29 +2,30 @@
  This module is a wrapper for the Brickset API v3
 """
 
+# import logging
 import json
 import requests
 from errors import InvalidRequest, InvalidApiKey, InvalidLoginCredentials, InvalidSetId
 
 # params = {"words": 10, "paragraphs": 1, "format": "json"}
-import logging
+
 
 # These two lines enable debugging at httplib level (requests->urllib3->http.client)
 # You will see the REQUEST, including HEADERS and DATA, and RESPONSE with HEADERS but without DATA.
 # The only thing missing will be the response.body which is not logged.
-try:
-    import http.client as http_client
-except ImportError:
-    # Python 2
-    import httplib as http_client
-http_client.HTTPConnection.debuglevel = 1
+# try:
+#     import http.client as http_client
+# except ImportError:
+#     # Python 2
+#     import httplib as http_client
+# http_client.HTTPConnection.debuglevel = 1
 
-# You must initialize logging, otherwise you'll not see debug output.
-logging.basicConfig()
-logging.getLogger().setLevel(logging.DEBUG)
-requests_log = logging.getLogger("requests.packages.urllib3")
-requests_log.setLevel(logging.DEBUG)
-requests_log.propagate = True
+# # You must initialize logging, otherwise you'll not see debug output.
+# logging.basicConfig()
+# logging.getLogger().setLevel(logging.DEBUG)
+# requests_log = logging.getLogger("requests.packages.urllib3")
+# requests_log.setLevel(logging.DEBUG)
+# requests_log.propagate = True
 
 class Client:
     '''
@@ -34,7 +35,7 @@ class Client:
     :raises pyBrickset.errors.InvalidApiKey: If the key provided is invalid.
     '''
 
-    BASEURL = 'https://brickset.com/api/v3.asmx{}'
+    baseUrl = 'https://brickset.com/api/v3.asmx{}'
 
     def __init__(self, apiKey):
         self.apiKey = apiKey
@@ -110,7 +111,7 @@ class Client:
         payload = {
             'apiKey': apiKey or self.apiKey
         }
-        url = self.BASEURL.format('/checkKey')
+        url = self.baseUrl.format('/checkKey')
 
         response = self.processHttpRequest(url, payload)
 
@@ -135,7 +136,7 @@ class Client:
             'username': username,
             'password': password,
         }
-        url = self.BASEURL.format('/login')
+        url = self.baseUrl.format('/login')
 
         response = self.processHttpRequest(url, payload)
 
@@ -167,7 +168,9 @@ class Client:
             'pageSize': pageSize,
             'theme': kwargs.get('theme', ''),
             'subtheme':   kwargs.get('subtheme', ''),
-            'setNumber':  kwargs.get('setNumber', '')
+            'setNumber':  kwargs.get('setNumber', ''),
+            'year':  kwargs.get('year', ''),
+            'orderBy':  kwargs.get('orderBy', '')
         }
 
         payload = {
@@ -175,13 +178,34 @@ class Client:
             'userHash': self.userHash,
             'params': json.dumps(params)
         }
-        url = self.BASEURL.format('/getSets')
+        url = self.baseUrl.format('/getSets')
 
         response = self.processHttpRequest(url, payload)
         self.checkResponse(response)
 
         jsonResponse = response.json()
         return jsonResponse["sets"]
+
+    def getAdditionalImages(self, setId):
+        '''
+        Get a list of URLs of additional set images for the specified sett.
+        :param str setId: The ID for the set you want to get the additional set images of.
+        :returns: A list of URLs to additional set images.
+        :rtype: List[`dict`]
+        '''
+
+        payload = {
+            'apiKey': self.apiKey,
+            'setID': setId
+        }
+        url = self.baseUrl.format('/getAdditionalImages')
+
+        response = self.processHttpRequest(url, payload)
+        self.checkResponse(response)
+        self.checkSetId(response, setId)
+
+        jsonResponse = response.json()
+        return jsonResponse["additionalImages"]
 
     def getThemes(self):
         '''
@@ -192,7 +216,7 @@ class Client:
         payload = {
             'apiKey': self.apiKey
         }
-        url = self.BASEURL.format('/getThemes')
+        url = self.baseUrl.format('/getThemes')
 
         response = self.processHttpRequest(url, payload)
         self.checkResponse(response)
@@ -212,7 +236,7 @@ class Client:
             'apiKey': self.apiKey,
             'setID': setId
         }
-        url = self.BASEURL.format('/getInstructions')
+        url = self.baseUrl.format('/getInstructions')
 
         response = self.processHttpRequest(url, payload)
         self.checkResponse(response)
@@ -237,7 +261,7 @@ class Client:
             'userHash': self.userHash,
             'params': json.dumps(params)
         }
-        url = self.BASEURL.format('/getMinifigCollection')
+        url = self.baseUrl.format('/getMinifigCollection')
 
         response = self.processHttpRequest(url, payload)
         self.checkResponse(response)

@@ -7,9 +7,6 @@ import json
 import requests
 from errors import InvalidRequest, InvalidApiKey, InvalidLoginCredentials, InvalidSetId
 
-# params = {"words": 10, "paragraphs": 1, "format": "json"}
-
-
 # These two lines enable debugging at httplib level (requests->urllib3->http.client)
 # You will see the REQUEST, including HEADERS and DATA, and RESPONSE with HEADERS but without DATA.
 # The only thing missing will be the response.body which is not logged.
@@ -159,6 +156,8 @@ class Client:
         'FRRetailPrice','UKPricePerPiece', 'USPricePerPiece', 'CAPricePerPiece', 'DEPricePerPiece',
         'FRPricePerPiece', 'Theme', 'Subtheme', 'Name', 'Random', 'QtyOwned', 'OwnCount',
         'WantCount', 'UserRating', 'CollectionID'.
+        :param str owned: Set to 1 to retrieve a user's owned sets.
+        :param str wanted: Set to 1 to retrieve a user's wanted sets.
         :param int pageSize: How many results are on a page. Defaults to 500.
         :returns: A list of sets.
         :rtype: list
@@ -170,7 +169,9 @@ class Client:
             'subtheme':   kwargs.get('subtheme', ''),
             'setNumber':  kwargs.get('setNumber', ''),
             'year':  kwargs.get('year', ''),
-            'orderBy':  kwargs.get('orderBy', '')
+            'orderBy':  kwargs.get('orderBy', ''),
+            'owned':  kwargs.get('owned', ''),
+            'wanted':  kwargs.get('wanted', '')
         }
 
         payload = {
@@ -188,7 +189,7 @@ class Client:
 
     def getAdditionalImages(self, setId):
         '''
-        Get a list of URLs of additional set images for the specified sett.
+        Get a list of URLs of additional set images for the specified set.
         :param str setId: The ID for the set you want to get the additional set images of.
         :returns: A list of URLs to additional set images.
         :rtype: List[`dict`]
@@ -206,23 +207,6 @@ class Client:
 
         jsonResponse = response.json()
         return jsonResponse["additionalImages"]
-
-    def getThemes(self):
-        '''
-        Gets a list Lego themes.
-        :returns: A list of themes.
-        :rtype: list
-        '''
-        payload = {
-            'apiKey': self.apiKey
-        }
-        url = self.baseUrl.format('/getThemes')
-
-        response = self.processHttpRequest(url, payload)
-        self.checkResponse(response)
-
-        jsonResponse = response.json()
-        return jsonResponse["themes"]
 
     def getInstructions(self, setId):
         '''
@@ -244,6 +228,116 @@ class Client:
 
         jsonResponse = response.json()
         return jsonResponse["instructions"]
+
+    def getReviews(self, setId):
+        '''
+        Get user reviews for the specified set.
+        :param str setId: The ID for the set you want to get the reviews of.
+        :returns: A list of reviews of the set.
+        :rtype: List[`dict`]
+        '''
+
+        payload = {
+            'apiKey': self.apiKey,
+            'setID': setId
+        }
+        url = self.baseUrl.format('/getReviews')
+
+        response = self.processHttpRequest(url, payload)
+        self.checkResponse(response)
+        self.checkSetId(response, setId)
+
+        jsonResponse = response.json()
+        return jsonResponse["reviews"]
+
+    def getThemes(self):
+        '''
+        Gets a list Lego themes.
+        :returns: A list of themes.
+        :rtype: list
+        '''
+        payload = {
+            'apiKey': self.apiKey
+        }
+        url = self.baseUrl.format('/getThemes')
+
+        response = self.processHttpRequest(url, payload)
+        self.checkResponse(response)
+
+        jsonResponse = response.json()
+        return jsonResponse["themes"]
+
+    def getSubthemes(self, Theme): # pylint: disable=invalid-name
+        '''
+        Get a list of subthemes for a given theme, with the total number of sets in each.
+        :param str Theme: Theme to find subthemes for.
+        :returns: A list of subthemes for the theme.
+        :rtype: list
+        '''
+        payload = {
+            'apiKey': self.apiKey,
+            'Theme': Theme
+        }
+        url = self.baseUrl.format('/getSubthemes')
+
+        response = self.processHttpRequest(url, payload)
+        self.checkResponse(response)
+
+        jsonResponse = response.json()
+        return jsonResponse["subthemes"]
+
+    def getYears(self, Theme): # pylint: disable=invalid-name
+        '''
+        Get a list of years for a given theme, with the total number of sets in each.
+        :param str Theme: Theme to find years for.
+        :returns: A list of years for the theme.
+        :rtype: list
+        '''
+        payload = {
+            'apiKey': self.apiKey,
+            'Theme': Theme
+        }
+        url = self.baseUrl.format('/getYears')
+
+        response = self.processHttpRequest(url, payload)
+        self.checkResponse(response)
+
+        jsonResponse = response.json()
+        return jsonResponse["years"]
+
+    def setCollection(self, setId, **kwargs):
+        '''
+        Set a user's collection details
+        :param str own: 1 or 0. If 0 then qtyOwned is automatically set to 0.
+        :param str want: 1 or 0.
+        :param str qtyOwned: 0-999. If > 0 then own is automatically set to 1.
+        :param str notes: User notes, max 1000 characters.
+        :param str rating: User rating 1-5.
+        :returns: API result.
+        :rtype: String
+        '''
+
+        params = {
+            'own': kwargs.get('own', ''),
+            'want':   kwargs.get('want', ''),
+            'qtyOwned':  kwargs.get('qtyOwned', ''),
+            'notes':  kwargs.get('notes', ''),
+            'rating':  kwargs.get('rating', '')
+        }
+
+        payload = {
+            'apiKey': self.apiKey,
+            'userHash': self.userHash,
+            'setID': setId,
+            'params': json.dumps(params)
+        }
+        url = self.baseUrl.format('/setCollection')
+
+        response = self.processHttpRequest(url, payload)
+        self.checkResponse(response)
+
+        jsonResponse = response.json()
+        return jsonResponse["status"]
 
     def getMinifigCollectionOwned(self):
         '''

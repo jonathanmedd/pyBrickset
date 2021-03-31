@@ -18,7 +18,6 @@ client.login('testuser@test.com', 'P@ssw0rd!')
 sets = client.getSets(theme='Indiana Jones')
 print(json.dumps(sets, indent=4))
 
-
 # top2Sets = sets[:5]
 # print(json.dumps(top2Sets, indent=4))
 

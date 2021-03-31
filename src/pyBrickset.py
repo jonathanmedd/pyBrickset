@@ -2,7 +2,7 @@
  This module is a wrapper for the Brickset API v3
 """
 
-# import logging
+# import logging - enable if logging required
 import json
 import requests
 from errors import InvalidRequest, InvalidApiKey, InvalidLoginCredentials, InvalidSetId
@@ -339,15 +339,39 @@ class Client:
         jsonResponse = response.json()
         return jsonResponse["status"]
 
-    def getMinifigCollectionOwned(self):
+    def getUserNotes(self):
+        '''
+        Get all of a user's set notes.
+        :returns: A list of a user's set notes.
+        :rtype: list
+        '''
+        payload = {
+            'apiKey': self.apiKey,
+            'userHash': self.userHash
+        }
+        url = self.baseUrl.format('/getUserNotes')
+
+        response = self.processHttpRequest(url, payload)
+        self.checkResponse(response)
+
+        jsonResponse = response.json()
+        return jsonResponse["userNotes"]
+
+    def getMinifigCollection(self, **kwargs):
         '''
         Get a list of minifigs owned by a user
+        :param str own: 1 or 0. If 0 then qtyOwned is automatically set to 0.
+        :param str want: 1 or 0.
+        :param str query: This can be a minifig number or name. Wildcards are added before and
+        after. If omitted, all minifigs owned are returned.
         :returns: A list of owned minifigs.
         :rtype: List[`dict`]
         '''
 
         params = {
-            'owned': 1
+            'owned': kwargs.get('owned', ''),
+            'wanted':   kwargs.get('wanted', ''),
+            'query':  kwargs.get('query', '')
         }
 
         payload = {
@@ -362,3 +386,54 @@ class Client:
 
         jsonResponse = response.json()
         return jsonResponse["minifigs"]
+
+    def setMinifigCollection(self, minifigNumber, **kwargs):
+        '''
+        Add/change a user's 'loose' minifig collection.
+        :param str minifigNumber: BrickLink minifig number.
+        :param str own: 1 or 0. If 0 then qtyOwned is automatically set to 0.
+        :param str want: 1 or 0.
+        :param str qtyOwned: 0-999. If > 0 then own is automatically set to 1.
+        :param str notes: User notes, max 1000 characters.
+        :returns: API result.
+        :rtype: String
+        '''
+
+        params = {
+            'own': kwargs.get('own', ''),
+            'want':   kwargs.get('want', ''),
+            'qtyOwned':  kwargs.get('qtyOwned', ''),
+            'notes':  kwargs.get('notes', '')
+        }
+
+        payload = {
+            'apiKey': self.apiKey,
+            'userHash': self.userHash,
+            'minifigNumber': minifigNumber,
+            'params': json.dumps(params)
+        }
+        url = self.baseUrl.format('/setMinifigCollection')
+
+        response = self.processHttpRequest(url, payload)
+        self.checkResponse(response)
+
+        jsonResponse = response.json()
+        return jsonResponse["status"]
+
+    def getUserMinifigNotes(self):
+        '''
+        Get all of a user's minifigure notes.
+        :returns: A list of a user's minifigure notes.
+        :rtype: list
+        '''
+        payload = {
+            'apiKey': self.apiKey,
+            'userHash': self.userHash
+        }
+        url = self.baseUrl.format('/getUserMinifigNotes')
+
+        response = self.processHttpRequest(url, payload)
+        self.checkResponse(response)
+
+        jsonResponse = response.json()
+        return jsonResponse["userMinifigNotes"]

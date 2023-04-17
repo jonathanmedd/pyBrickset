@@ -2,8 +2,6 @@
  This module is a wrapper for the Brickset API v3
 """
 
-# test
-
 # import logging - enable if logging required
 import json
 import requests

@@ -53,8 +53,8 @@ class Client:
 
             if jsonResponse["status"] == 'error':
                 raise InvalidRequest(
-                    'Brickset error was {}'.format(jsonResponse["message"]))
-            return
+                    f'Brickset error was {jsonResponse["message"]}')
+            return 'Brickset request has no error in the response'
 
     @staticmethod
     def processHttpRequest(url, payload):
@@ -68,7 +68,7 @@ class Client:
         '''
 
         try:
-            response = requests.post(url, data=payload)
+            response = requests.post(url, data=payload, timeout=10)
             response.raise_for_status()
             return response
         except requests.exceptions.HTTPError as err:
@@ -90,7 +90,7 @@ class Client:
 
         if jsonResponse["matches"] == 0:
             raise InvalidSetId(
-                'SetId {} was not found so is invalid'.format(setId))
+                f'SetId {setId} was not found so is invalid')
 
     def checkApiKey(self, apiKey=None):
         '''
@@ -115,7 +115,7 @@ class Client:
         jsonResponse = response.json()
         if jsonResponse["status"] == 'error':
             raise InvalidApiKey(
-                'The provided API key {} was invalid.'.format(apiKey))
+                f'The provided API key {apikey} was invalid.')
         return True
 
     def login(self, username, password):
@@ -139,7 +139,7 @@ class Client:
 
         jsonResponse = response.json()
         if jsonResponse["status"] == 'error':
-            raise InvalidLoginCredentials('{}'.format(jsonResponse["message"]))
+            raise InvalidLoginCredentials(f'{jsonResponse["message"]}')
 
         self.userHash = jsonResponse["hash"]
         return True

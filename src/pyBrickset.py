@@ -54,7 +54,7 @@ class Client:
             if jsonResponse["status"] == 'error':
                 raise InvalidRequest(
                     f'Brickset error was {jsonResponse["message"]}')
-            return 'Brickset request has no error in the response'
+            return None
 
     @staticmethod
     def processHttpRequest(url, payload):
@@ -115,7 +115,7 @@ class Client:
         jsonResponse = response.json()
         if jsonResponse["status"] == 'error':
             raise InvalidApiKey(
-                f'The provided API key {apikey} was invalid.')
+                f'The provided API key {apiKey} was invalid.')
         return True
 
     def login(self, username, password):

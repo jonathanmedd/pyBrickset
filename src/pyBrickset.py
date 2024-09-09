@@ -42,7 +42,7 @@ class Client:
         self.checkApiKey()
 
     @staticmethod
-    def checkResponse(request):
+    def checkResponse(request) -> None:
         '''
         Returns if a Brickset request has no error in the response, otherwise raises InvalidRequest.
         '''
@@ -50,11 +50,8 @@ class Client:
         # Check API status code, if 200 then check payload response for error
         if request.status_code == 200:
             jsonResponse = request.json()
-
-            if jsonResponse["status"] == 'error':
-                raise InvalidRequest(
-                    'Brickset error was {}'.format(jsonResponse["message"]))
-            return
+            if jsonResponse.get("status") == 'error':
+                raise InvalidRequest(f'Brickset error was: {jsonResponse.get("message")}')
 
     @staticmethod
     def processHttpRequest(url, payload):
@@ -68,7 +65,7 @@ class Client:
         '''
 
         try:
-            response = requests.post(url, data=payload)
+            response = requests.post(url, data=payload, timeout=10)
             response.raise_for_status()
             return response
         except requests.exceptions.HTTPError as err:
@@ -90,7 +87,7 @@ class Client:
 
         if jsonResponse["matches"] == 0:
             raise InvalidSetId(
-                'SetId {} was not found so is invalid'.format(setId))
+                f'SetId {setId} was not found so is invalid')
 
     def checkApiKey(self, apiKey=None):
         '''
@@ -115,7 +112,7 @@ class Client:
         jsonResponse = response.json()
         if jsonResponse["status"] == 'error':
             raise InvalidApiKey(
-                'The provided API key {} was invalid.'.format(apiKey))
+                f'The provided API key {apiKey} was invalid.')
         return True
 
     def login(self, username, password):
@@ -139,7 +136,7 @@ class Client:
 
         jsonResponse = response.json()
         if jsonResponse["status"] == 'error':
-            raise InvalidLoginCredentials('{}'.format(jsonResponse["message"]))
+            raise InvalidLoginCredentials(f'{jsonResponse["message"]}')
 
         self.userHash = jsonResponse["hash"]
         return True

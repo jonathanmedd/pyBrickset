@@ -42,7 +42,7 @@ class Client:
         self.checkApiKey()
 
     @staticmethod
-    def checkResponse(request):
+    def checkResponse(request) -> None:
         '''
         Returns if a Brickset request has no error in the response, otherwise raises InvalidRequest.
         '''
@@ -50,11 +50,8 @@ class Client:
         # Check API status code, if 200 then check payload response for error
         if request.status_code == 200:
             jsonResponse = request.json()
-
-            if jsonResponse["status"] == 'error':
-                raise InvalidRequest(
-                    f'Brickset error was {jsonResponse["message"]}')
-            return None
+            if jsonResponse.get("status") == 'error':
+                raise InvalidRequest(f'Brickset error was: {jsonResponse.get("message")}')
 
     @staticmethod
     def processHttpRequest(url, payload):
